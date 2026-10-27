@@ -17,7 +17,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up Java
+      - name: Set up Java 17
         uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -30,33 +30,107 @@ jobs:
 
       - name: Extract app source ZIP
         run: unzip -o FriendsChat-Android-Starter.zip
-- name: Force Java and Kotlin JVM 17
+
+      - name: Create JVM target override
         shell: bash
         run: |
-          python3 - <<'PY'
-          from pathlib import Path
+          cat > force-jvm.gradle <<'EOF'
+          allprojects {
+              afterEvaluate {
+                  tasks.withType(org.gradle.api.tasks.compile.JavaCompile).configureEach {
+                      sourceCompatibility = "17"
+                      targetCompatibility = "17"
+                  }
 
-          p = Path("FriendsChat/app/build.gradle.kts")
-          s = p.read_text()
-
-          s += """
-
-          tasks.withType<JavaCompile>().configureEach {
-              sourceCompatibility = JavaVersion.VERSION_17.toString()
-              targetCompatibility = JavaVersion.VERSION_17.toString()
+                  tasks.matching {
+                      it.name.startsWith("compile") &&
+                      it.name.endsWith("Kotlin")
+                  }.configureEach {
+                      kotlinOptions.jvmTarget = "17"
+                  }
+              }
           }
+          EOF
 
-          tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
-              kotlinOptions.jvmTarget = "17"
-          }
-          """
-
-          p.write_text(s)
-          print("Java and Kotlin targets set to 17")
-          PY
+      - name: Verify Java and Kotlin settings
+        run: |
+          echo "Java version:"
+          java -version
+          echo "App Gradle configuration:"
+          cat FriendsChat/app/build.gradle.kts
 
       - name: Build Android APK
-        run: gradle -p FriendsChat :app:assembleDebug
+        run: gradle -I force-jvm.gradle -p FriendsChat :app:assembleDebug --stacktrace
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: FriendsChat-debug
+          path: FriendsChat/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 7name: Build Friends Chat APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  android:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+
+      - name: Extract app source ZIP
+        run: unzip -o FriendsChat-Android-Starter.zip
+
+      - name: Create JVM target override
+        shell: bash
+        run: |
+          cat > force-jvm.gradle <<'EOF'
+          allprojects {
+              afterEvaluate {
+                  tasks.withType(org.gradle.api.tasks.compile.JavaCompile).configureEach {
+                      sourceCompatibility = "17"
+                      targetCompatibility = "17"
+                  }
+
+                  tasks.matching {
+                      it.name.startsWith("compile") &&
+                      it.name.endsWith("Kotlin")
+                  }.configureEach {
+                      kotlinOptions.jvmTarget = "17"
+                  }
+              }
+          }
+          EOF
+
+      - name: Verify Java and Kotlin settings
+        run: |
+          echo "Java version:"
+          java -version
+          echo "App Gradle configuration:"
+          cat FriendsChat/app/build.gradle.kts
+
+      - name: Build Android APK
+        run: gradle -I force-jvm.gradle -p FriendsChat :app:assembleDebug --stacktrace
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
