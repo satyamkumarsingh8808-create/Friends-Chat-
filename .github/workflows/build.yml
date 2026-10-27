@@ -3,7 +3,8 @@ name: Build Friends Chat APK
 on:
   workflow_dispatch:
   push:
-    branches: [main]
+    branches:
+      - main
 
 permissions:
   contents: read
@@ -29,16 +30,27 @@ jobs:
 
       - name: Extract app source ZIP
         run: unzip -o FriendsChat-Android-Starter.zip
-- name: Fix Java JVM target
-    run: |
-      python3 - <<'PY'
-      from pathlib import Path
-      p = Path("FriendsChat/app/build.gradle.kts")
-      s = p.read_text()
-      s = s.replace("JavaVersion.VERSION_1_8", "JavaVersion.VERSION_17")
-      p.write_text(s)
-      print("Updated Java target to 17")
-      PY
+
+      - name: Fix Java and Kotlin JVM targets
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          p = Path("FriendsChat/app/build.gradle.kts")
+          if not p.exists():
+              raise SystemExit(f"Build file not found: {p}")
+
+          s = p.read_text()
+          s = s.replace("JavaVersion.VERSION_1_8", "JavaVersion.VERSION_17")
+          s = s.replace("jvmTarget = \"1.8\"", "jvmTarget = \"17\"")
+          s = s.replace("jvmTarget = '1.8'", "jvmTarget = '17'")
+          p.write_text(s)
+
+          print("Updated Java and Kotlin target settings where matched.")
+          print(s)
+          PY
+
       - name: Build Android APK
         run: gradle -p FriendsChat :app:assembleDebug
 
