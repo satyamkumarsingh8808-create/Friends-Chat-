@@ -30,25 +30,29 @@ jobs:
 
       - name: Extract app source ZIP
         run: unzip -o FriendsChat-Android-Starter.zip
-
-      - name: Fix Java and Kotlin JVM targets
+- name: Force Java and Kotlin JVM 17
         shell: bash
         run: |
           python3 - <<'PY'
           from pathlib import Path
 
           p = Path("FriendsChat/app/build.gradle.kts")
-          if not p.exists():
-              raise SystemExit(f"Build file not found: {p}")
-
           s = p.read_text()
-          s = s.replace("JavaVersion.VERSION_1_8", "JavaVersion.VERSION_17")
-          s = s.replace("jvmTarget = \"1.8\"", "jvmTarget = \"17\"")
-          s = s.replace("jvmTarget = '1.8'", "jvmTarget = '17'")
-          p.write_text(s)
 
-          print("Updated Java and Kotlin target settings where matched.")
-          print(s)
+          s += """
+
+          tasks.withType<JavaCompile>().configureEach {
+              sourceCompatibility = JavaVersion.VERSION_17.toString()
+              targetCompatibility = JavaVersion.VERSION_17.toString()
+          }
+
+          tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
+              kotlinOptions.jvmTarget = "17"
+          }
+          """
+
+          p.write_text(s)
+          print("Java and Kotlin targets set to 17")
           PY
 
       - name: Build Android APK
