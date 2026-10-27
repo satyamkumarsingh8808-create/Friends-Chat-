@@ -29,7 +29,16 @@ jobs:
 
       - name: Extract app source ZIP
         run: unzip -o FriendsChat-Android-Starter.zip
-
+- name: Fix Java JVM target
+    run: |
+      python3 - <<'PY'
+      from pathlib import Path
+      p = Path("FriendsChat/app/build.gradle.kts")
+      s = p.read_text()
+      s = s.replace("JavaVersion.VERSION_1_8", "JavaVersion.VERSION_17")
+      p.write_text(s)
+      print("Updated Java target to 17")
+      PY
       - name: Build Android APK
         run: gradle -p FriendsChat :app:assembleDebug
 
