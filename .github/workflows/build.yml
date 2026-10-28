@@ -3,8 +3,7 @@ name: Build Friends Chat APK
 on:
   workflow_dispatch:
   push:
-    branches:
-      - main
+    branches: [main]
 
 permissions:
   contents: read
@@ -17,7 +16,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up Java 17
+      - name: Set up Java
         uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -28,60 +27,38 @@ jobs:
         with:
           gradle-version: '8.9'
 
+      - name: Check required files
+        run: |
+          test -f FriendsChat-Android-Starter.zip
+          test -f google-services.json
+
       - name: Extract app source ZIP
         run: unzip -o FriendsChat-Android-Starter.zip
 
-      - name: Set Java and Kotlin targets
-        shell: bash
+      - name: Configure Firebase file
         run: |
-          cat > FriendsChat/app/build.gradle.kts <<'EOF'
-          plugins {
-              id("com.android.application")
-              id("org.jetbrains.kotlin.android")
-              id("org.jetbrains.kotlin.plugin.compose")
-          }
+          mkdir -p FriendsChat/app
+          cp google-services.json FriendsChat/app/google-services.json
 
-          android {
-              namespace = "com.example.friendschat"
-              compileSdk = 35
+      - name: Configure Java and Kotlin targets
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
 
-              defaultConfig {
-                  applicationId = "com.example.friendschat"
-                  minSdk = 24
-                  targetSdk = 35
-                  versionCode = 1
-                  versionName = "0.1.0"
-              }
+          p = Path("FriendsChat/app/build.gradle.kts")
+          s = p.read_text()
 
-              buildFeatures {
-                  compose = true
-              }
+          s = s.replace(
+              "JavaVersion.VERSION_1_8",
+              "JavaVersion.VERSION_17"
+          )
 
-              compileOptions {
-                  sourceCompatibility = JavaVersion.VERSION_17
-                  targetCompatibility = JavaVersion.VERSION_17
-              }
+          if 'jvmTarget = "1.8"' in s:
+              s = s.replace('jvmTarget = "1.8"', 'jvmTarget = "17"')
 
-              kotlinOptions {
-                  jvmTarget = "17"
-              }
-          }
-
-          dependencies {
-              implementation(platform("androidx.compose:compose-bom:2024.12.01"))
-              implementation("androidx.activity:activity-compose:1.10.0")
-              implementation("androidx.compose.ui:ui")
-              implementation("androidx.compose.ui:ui-tooling-preview")
-              implementation("androidx.compose.material3:material3")
-              implementation("androidx.compose.material:material-icons-extended")
-              implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.7")
-              debugImplementation("androidx.compose.ui:ui-tooling")
-          }
-          EOF
-
-          echo "Checking Android Gradle configuration..."
-          grep -A 2 "compileOptions" FriendsChat/app/build.gradle.kts
-          grep -A 2 "kotlinOptions" FriendsChat/app/build.gradle.kts
+          p.write_text(s)
+          print("Java/Kotlin target configuration checked.")
+          PY
 
       - name: Build Android APK
         run: gradle -p FriendsChat :app:assembleDebug
@@ -92,4 +69,144 @@ jobs:
           name: FriendsChat-debug
           path: FriendsChat/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
-          retention-days: 7
+          retention-days: 7name: Build Friends Chat APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  android:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+
+      - name: Check required files
+        run: |
+          test -f FriendsChat-Android-Starter.zip
+          test -f google-services.json
+
+      - name: Extract app source ZIP
+        run: unzip -o FriendsChat-Android-Starter.zip
+
+      - name: Configure Firebase file
+        run: |
+          mkdir -p FriendsChat/app
+          cp google-services.json FriendsChat/app/google-services.json
+
+      - name: Configure Java and Kotlin targets
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          p = Path("FriendsChat/app/build.gradle.kts")
+          s = p.read_text()
+
+          s = s.replace(
+              "JavaVersion.VERSION_1_8",
+              "JavaVersion.VERSION_17"
+          )
+
+          if 'jvmTarget = "1.8"' in s:
+              s = s.replace('jvmTarget = "1.8"', 'jvmTarget = "17"')
+
+          p.write_text(s)
+          print("Java/Kotlin target configuration checked.")
+          PY
+
+      - name: Build Android APK
+        run: gradle -p FriendsChat :app:assembleDebug
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: FriendsChat-debug
+          path: FriendsChat/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 7name: Build Friends Chat APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  android:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+
+      - name: Check required files
+        run: |
+          test -f FriendsChat-Android-Starter.zip
+          test -f google-services.json
+
+      - name: Extract app source ZIP
+        run: unzip -o FriendsChat-Android-Starter.zip
+
+      - name: Configure Firebase file
+        run: |
+          mkdir -p FriendsChat/app
+          cp google-services.json FriendsChat/app/google-services.json
+
+      - name: Configure Java and Kotlin targets
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          p = Path("FriendsChat/app/build.gradle.kts")
+          s = p.read_text()
+
+          s = s.replace(
+              "JavaVersion.VERSION_1_8",
+              "JavaVersion.VERSION_17"
+          )
+
+          if 'jvmTarget = "1.8"' in s:
+              s = s.replace('jvmTarget = "1.8"', 'jvmTarget = "17"')
+
+          p.write_text(s)
+          print("Java/Kotlin target configuration checked.")
+          PY
+
+      - name: Build Android APK
+        run: gradle -p FriendsChat :app:assembleDebug
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: FriendsChat-debug
+          path: FriendsChat/app/build/outputs
